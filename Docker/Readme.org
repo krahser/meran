@@ -1,0 +1,106 @@
+* Instalación de meran con docker
+
+Requisitos:
+- [[https://www.docker.com/][Docker]]
+
+** ¿Cómo funciona?
+
+1. Necesitamos tener una base de datos.
+
+Para eso mi eleccion fue mariadb, pero también pueden utilizar mysql.
+
+Para que la base quede funcionando creamos un contenedor con:
+
+#+BEGIN_SRC sh
+docker run --name mariadb <path>:/var/run/mysqld -e MYSQL_ROOT_PASSWORD=pal4br4S3cr3t4 -d mariadb
+#+END_SRC
+
+La opcion -v que monta un volumen es necesaria por un bug[link] en la instalación,
+La opcion -p es necesaria, ya que en la creacion de la imagen meran:base se inicializa la base de datos.
+
+<path> es una ubicación para poder compartir el socket de mariadb.
+
+2. Meran
+
+
+Dentro de la carpeta Docker/base se encuentra una imagen que satisface los requisitos para instalar meran.
+La carpeta latest sirve para crear imagenes de distintas instancias de meran.
+
+Es necesario que editemos 2 archivos.
+
+Primero ajustar los datos de archivos/ssl.sh:
+
+#+BEGIN_SRC 
+set country "AR"
+set state "Buenos Aires"
+set locality "La Plata"
+set organization "Oesterheld"
+set organization_unit "biblioteca"
+set common_name "oesterheld.olgavazquez"
+set email "a@b.com"
+#+END_SRC
+
+
+Y luego cambiamos <usuario_docker>,<nombre_biblioteca> y <pass_root_db>
+en el archivo *<path_meran>/Docker/latest/Dockerfile*
+
+<usuario_docker> es tu usuario en [[https://registry.hub.docker.com/][Docker registry]] o tu nombre de usuario
+<nombre_biblioteca> es el nombre de la biblioteca a digitalizar
+<pass_root_db> Contraseña de root para la base de datos
+
+#+BEGIN_SRC 
+FROM <usuario_docker>/meran:base
+
+RUN ./instalar.sh -i <nombre_biblioteca> -N -B1 -P <pass_root_db> -h 172.17.42.1
+RUN expect /opt/ssl.sh
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+
+#Logs de meran
+VOLUME /var/log/meran
+EXPOSE 80 443
+
+CMD /usr/bin/supervisord
+#+END_SRC
+
+Construimos la imagen base:
+
+#+BEGIN_SRC sh
+$ cd <path_meran>/Docker/base
+$ docker build -t '<usuario_docker>/meran:base' .
+#+END_SRC
+
+
+Construimos la instancia de meran:
+#+BEGIN_SRC sh
+$ cd <path_meran>/Docker/
+$ docker build -t '<usuario_docker>/meran:<nombre_biblioteca> .
+#+END_SRC
+
+
+
+- Bug
+
+Mirar esto [link]
+
+Cuando terminamos de construir la imagen se genero automaticamente un usuario para conectarse a la base de datos
+ese usuario (kohaadmin) y contraseña(ramdom) no tienen acceso a la base de datos, 
+para probar esto podemos hacer lo siguiente:
+
+#+BEGIN_SRC 
+docker run -it krahser/meran grep -A2 'user=kohaadmin' /etc/meran/meran<nombre_biblioteca>.conf
+mysql -u root -p<pass_root_db> -h 172.17.42.1 -e "grant all on meran.* to saraza@'%' identified by 'asd';"
+#+END_SRC
+
+
+
+
+#+BEGIN_SRC sh
+docker run --name meran -p 80:80 -p 443:443 --volumes-from mariadb krahser/meran
+#+END_SRC
+
+
+La opcion --volumes-from mariadb es necesaria por un bug en la instalación.
+
+- Agregar link descripcion
