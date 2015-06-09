@@ -80,20 +80,7 @@ $ docker build -t '<usuario_docker>/meran:<nombre_biblioteca> .
 
 
 
-- Bug
-
-Mirar esto [link]
-
-Cuando terminamos de construir la imagen se genero automaticamente un usuario para conectarse a la base de datos
-ese usuario (kohaadmin) y contraseña(ramdom) no tienen acceso a la base de datos, 
-para probar esto podemos hacer lo siguiente:
-
-#+BEGIN_SRC 
-docker run -it krahser/meran grep -A2 'user=kohaadmin' /etc/meran/meran<nombre_biblioteca>.conf
-mysql -u root -p<pass_root_db> -h 172.17.42.1 -e "grant all on meran.* to saraza@'%' identified by 'asd';"
-#+END_SRC
-
-
+- Bug [[https://github.com/Desarrollo-CeSPI/meran/issues/59][#59]]
 
 
 #+BEGIN_SRC sh
@@ -103,4 +90,4 @@ docker run --name meran -p 80:80 -p 443:443 --volumes-from mariadb krahser/meran
 
 La opcion --volumes-from mariadb es necesaria por un bug en la instalación.
 
-- Agregar link descripcion
+- Bug [[https://github.com/Desarrollo-CeSPI/meran/issues/60][#60]]
